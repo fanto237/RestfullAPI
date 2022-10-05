@@ -1,5 +1,4 @@
 ﻿using MagicVillaAPI.Data;
-using MagicVillaAPI.Mapper;
 using MagicVillaAPI.Models;
 using MagicVillaAPI.Models.Dto;
 using Microsoft.AspNetCore.JsonPatch;
@@ -7,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MagicVillaAPI.Controllers;
-
+using Mapping = AutoMapper;
 [ApiController]
 [Route("api/villaAPI")]
 // [Route("api/[controller]")]
@@ -15,10 +14,11 @@ public class VillaApiController : ControllerBase
 {
     private readonly ILogger<VillaApiController> _logger;
     private readonly DataContext _dbContext;
-    private readonly IMapper _mapper;
+    private readonly Mapping.IMapper _mapper;
+    // private readonly 
     
 
-    public VillaApiController(ILogger<VillaApiController> logger, DataContext dbContext, IMapper mapper)
+    public VillaApiController(ILogger<VillaApiController> logger, DataContext dbContext, Mapping.IMapper mapper)
     {
         _logger = logger;
         _dbContext = dbContext;
@@ -31,11 +31,11 @@ public class VillaApiController : ControllerBase
     /// <returns></returns>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public ActionResult<IEnumerable<VillaDto>> GetVillas()
+    public async Task<ActionResult<IEnumerable<VillaDto>>> GetVillas()
     {
         _logger.LogInformation("Getting all villas");
-        var allVillas = _dbContext.Villas.ToList();
-        return Ok(allVillas);
+        var villas = await _dbContext.Villas.ToListAsync();
+        return Ok(villas.Select(u => _mapper.Map<VillaDto>(u)));
     }
 
 
@@ -50,15 +50,15 @@ public class VillaApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     // [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(VillaDto))]
     // [Route("api/villaAPI/{id:int}")]
-    public ActionResult<VillaDto> Get(int id)
+    public async Task<ActionResult<VillaDto>> Get(int id)
     {
         if (id == 0)
         {
-            _logger.LogError("The id can't be different to 0", id);
+            _logger.LogError("The id can't be different to 0");
             return BadRequest();
         }
 
-        var villa = _dbContext.Villas.FirstOrDefault(u =>u.Id == id);
+        var villa = await _dbContext.Villas.FindAsync(id);
         if (villa is null)
         {
             _logger.LogError("There is no villa found corresponding to this id :{Id}", id);
@@ -77,35 +77,19 @@ public class VillaApiController : ControllerBase
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public ActionResult<VillaDto> Create([FromBody] VillaDto? villaDto)
+    public async Task<ActionResult<VillaCreateDto>> Create([FromBody] VillaCreateDto villaDto)
     {
-        // if (!ModelState.IsValid)
-        //     return BadRequest(ModelState);
-
-        if (_dbContext.Villas.ToList().FirstOrDefault(u => u.Name == villaDto?.Name) is not null)
+        if (await _dbContext.Villas.FirstOrDefaultAsync(u => u.Name == villaDto.Name) is not null)
         {
-            _logger.LogError("The villa : {VillaDtoName} already exist in the API", villaDto?.Name);
-            ModelState.AddModelError("CustomError", $"The villa : {villaDto?.Name} already exist in the API");
+            _logger.LogError("The villa : {VillaDtoName} already exist in the API", villaDto.Name);
+            ModelState.AddModelError("CustomError", $"The villa : {villaDto.Name} already exist in the API");
             return BadRequest(ModelState);
         }
 
-        if (villaDto is null)
-        {
-            _logger.LogError("The Villa to be created is not valid");
-            return BadRequest(villaDto);
-        }
-
-        if (villaDto.Id > 0)
-        {
-            _logger.LogError("The Id can't be bigger than 0");
-            return StatusCode(StatusCodes.Status500InternalServerError);
-        }
-
-        var entity = _mapper.Map<Villa>(villaDto);
-        _dbContext.Villas.Add(entity);
-        _dbContext.SaveChanges();
-        return CreatedAtRoute("GetVilla", new { id = villaDto.Id }, villaDto);
+        var model = _mapper.Map<Villa>(villaDto);
+        await _dbContext.Villas.AddAsync(model);
+        await _dbContext.SaveChangesAsync();
+        return CreatedAtRoute("GetVilla", new { id = model.Id }, model);
     }
 
     /// <summary>
@@ -117,11 +101,11 @@ public class VillaApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
         if (id is 0)
             return BadRequest();
-        var villaToDelete = _dbContext.Villas.FirstOrDefault(u => u.Id == id);
+        var villaToDelete = await _dbContext.Villas.FirstOrDefaultAsync(u => u.Id == id);
         if (villaToDelete is null)
         {
             _logger.LogError("There is no villa found corresponding to this id :{Id}", id);
@@ -129,7 +113,7 @@ public class VillaApiController : ControllerBase
         }
 
         _dbContext.Villas.Remove(villaToDelete);
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
         _logger.LogInformation("The villa with the id {Id} has been deleted", id);
         return NoContent();
     }
@@ -138,26 +122,19 @@ public class VillaApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult Update(int id, [FromBody] VillaDto? villaDto)
+    public async Task<IActionResult> Update(int id, [FromBody] VillaUpdateDto? villaUpdateDto)
     {
-        if (villaDto is null || villaDto.Id != id)
+        if (villaUpdateDto is null || villaUpdateDto.Id != id)
         {
             _logger.LogError("The villa can't be null or have an id different to the id of the villa to update ");
             return BadRequest();
         }
 
-        // var villaToUpdate = _dbContext.Villas.FirstOrDefault(u => u.Id == id);
-        // if (villaToUpdate is null)
-        // {
-        //     _logger.LogError("The no villa found corresponding to this id :{Id}", id);
-        //     return NotFound();
-        // }
-
-        var villaToUpdate = _mapper.Map<Villa>(villaDto);
-        villaToUpdate.Id = villaDto.Id;
+        var villaToUpdate = _mapper.Map<Villa>(villaUpdateDto);
+        villaToUpdate.Id = villaUpdateDto.Id;
         villaToUpdate.UpdatedDate = DateTime.Now;
         _dbContext.Villas.Update(villaToUpdate);
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
         _logger.LogInformation("The villa with the Id {Id} has been updated", id);
         return NoContent();
     }
@@ -166,7 +143,7 @@ public class VillaApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult Patch(int id, [FromBody] JsonPatchDocument<VillaDto>? patchDto)
+    public async Task<IActionResult> Patch(int id, [FromBody] JsonPatchDocument<VillaUpdateDto>? patchDto)
     {
         if (id == 0 || patchDto is null)
         {
@@ -174,23 +151,23 @@ public class VillaApiController : ControllerBase
             return BadRequest();
         }
 
-        var villaToPatch = _dbContext.Villas.AsNoTracking().FirstOrDefault(u => u.Id == id);
+        var villaToPatch = await _dbContext.Villas.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
         if (villaToPatch is null)
         {
             _logger.LogError("The no villa found corresponding to this id :{Id}", id);
             return NotFound();
         }
 
-        var villaDto = _mapper.Map<VillaDto>(villaToPatch);
+        var villaUpdateDto = _mapper.Map<VillaUpdateDto>(villaToPatch);
 
-        patchDto.ApplyTo(villaDto, ModelState);
+        patchDto.ApplyTo(villaUpdateDto, ModelState);
         if (!ModelState.IsValid)
             return BadRequest();
 
-        villaToPatch = _mapper.Map<Villa>( villaDto  );
+        villaToPatch = _mapper.Map<Villa>( villaUpdateDto  );
         villaToPatch.UpdatedDate = DateTime.Now;
         _dbContext.Villas.Update(villaToPatch);
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
         _logger.LogInformation("The villa with the Id {Id} has been updated", id);
         return Ok();
     }
