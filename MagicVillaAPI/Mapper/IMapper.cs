@@ -3,8 +3,10 @@ using MagicVillaAPI.Models.Dto;
 
 namespace MagicVillaAPI.Mapper;
 
-public interface IMapper
+public interface IMyMapper
 {
-    Villa Map<T>(VillaDto source) where T : Villa, new();
-    VillaDto Map<T>(Villa source) where T : VillaDto, new();
+    VillaUpdateDto Map<T>(Villa source) where T : VillaUpdateDto, new();
+    // VillaDto Map<T>(Villa source) where T : VillaDto, new();
+    Villa Map<T>(VillaCreateDto source) where T : Villa, new();
+    Villa Map<T>(VillaUpdateDto source) where T : Villa, new(); 
 }
