@@ -8,12 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddSingleton<IMapper, Mapper>();
+// builder.Services.AddSingleton<IMapper, Mapper>();
 Log.Logger = new LoggerConfiguration().MinimumLevel.Information().WriteTo
     .File("log/villalogs.txt", rollingInterval: RollingInterval.Hour).CreateLogger();
 builder.Host.UseSerilog();
 builder.Services.AddDbContext<DataContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("DefautlSQLConnection")));
+builder.Services.AddAutoMapper(typeof(MapperConfig));
 
 // builder.Services.AddSingleton<ILogging, Logging>();
 // builder.Services.AddControllers(options => options.ReturnHttpNotAcceptable = true).AddNewtonsoftJson().AddXmlDataContractSerializerFormatters();
