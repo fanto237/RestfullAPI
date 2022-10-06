@@ -19,28 +19,32 @@ class Repository : IRepository
         _dbContext = dbContext;
     }
 
-    public Task<List<Villa>> GetAll(Expression<Func<Villa>>? filter = null)
+    public async Task<List<Villa>> GetAll(Expression<Func<Villa>>? filter = null)
     {
-        throw new NotImplementedException();
+        return await _dbContext.Villas.ToListAsync();
     }
 
-    public Task<Villa> Get(Expression<Func<Villa>>? filter = null, bool isTracked = true)
+    public async Task<Villa> Get(Expression<Func<Villa>>? filter = null, bool isTracked = true)
     {
-        throw new NotImplementedException();
+        var model = await _dbContext.Villas.FirstOrDefaultAsync(filter);
+
+        return model;
     }
 
-    public Task Create(Villa entity)
+    public async Task Create(Villa entity)
     {
-        throw new NotImplementedException();
+        await _dbContext.AddAsync(entity);
+        await Save();
     }
 
-    public Task Remove(Villa entity)
+    public async Task Remove(Villa entity)
     {
-        throw new NotImplementedException();
+         _dbContext.Remove(entity);
+         await Save();
     }
 
-    public Task Save()
+    public async Task Save()
     {
-        throw new NotImplementedException();
+        await _dbContext.SaveChangesAsync();
     }
 }
