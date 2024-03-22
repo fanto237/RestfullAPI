@@ -1,0 +1,28 @@
+﻿version: "3.9"
+
+services:
+  
+  # sql server container service
+  db:
+    image: postgres
+    container_name: db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-fanto}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-Sanada237@}
+      POSTGRES_DB: ${DATABASE_DATABASE:-MagicVilla}
+      PGDATA: /data/postgres
+    volumes:
+      - postgres:/data/postgres
+    restart: unless-stopped
+    networks:
+      - magicnet
+
+networks:
+  magicnet:
+    driver: bridge
+
+volumes:
+  postgres:
+    driver: local
