@@ -13,6 +13,19 @@ public class DataContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Villa>()
+            .Property(e => e.CreatedDate)
+            .HasConversion(
+                v => v,
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+            );
+        modelBuilder.Entity<Villa>()
+            .Property(e => e.UpdatedDate)
+            .HasConversion(
+                v => v,
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+            );
+
         modelBuilder.Entity<Villa>().HasData(
             new Villa
             {
