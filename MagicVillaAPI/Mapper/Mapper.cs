@@ -3,14 +3,24 @@ using MagicVillaAPI.Models.Dto;
 
 namespace MagicVillaAPI.Mapper;
 
-public class Mapper : IMyMapper
+public sealed class Mapper : IMapper
 {
-    public Villa Map<T>(VillaDto source) where T : Villa, new()
+    public Villa Map<T>(VillaCreateDto source) where T : Villa, new()
     {
         return Map(source, new T());
     }
 
-    public Villa Map<T>(VillaCreateDto source) where T : Villa, new()
+    public Villa Map<T>(VillaUpdateDto source) where T : Villa, new()
+    {
+        return Map(source, new T());
+    }
+
+    public VillaUpdateDto Map<T>(Villa source) where T : VillaUpdateDto, new()
+    {
+        return Map(source, new T());
+    }
+
+    public Villa Map<T>(VillaDto source) where T : Villa, new()
     {
         return Map(source, new T());
     }
@@ -29,14 +39,9 @@ public class Mapper : IMyMapper
         return destination;
     }
 
-    public Villa Map<T>(VillaUpdateDto source) where T : Villa, new()
-    {
-        return Map(source, new T());
-    }
-
     private Villa Map(VillaUpdateDto source, Villa destination)
     {
-        if(source.Id != 0)
+        if (source.Id != 0)
             destination.Id = source.Id;
         destination.Name = source.Name;
         destination.Occupancy = source.Occupancy;
@@ -50,9 +55,9 @@ public class Mapper : IMyMapper
         return destination;
     }
 
-    protected virtual Villa Map(VillaDto source, Villa destination)
-    {        
-        if(source.Id != 0)
+    private Villa Map(VillaDto source, Villa destination)
+    {
+        if (source.Id != 0)
             destination.Id = source.Id;
         destination.Name = source.Name;
         destination.Occupancy = source.Occupancy;
@@ -65,15 +70,10 @@ public class Mapper : IMyMapper
         destination.CreatedDate = DateTime.Now;
         return destination;
     }
-    
-    public VillaUpdateDto Map<T>(Villa source) where T : VillaUpdateDto, new()
+
+    private VillaUpdateDto Map(Villa source, VillaUpdateDto destination)
     {
-        return Map(source, new T());
-    }
-    
-    protected virtual VillaUpdateDto Map(Villa source, VillaUpdateDto destination)
-    {
-        if(source.Id != 0)
+        if (source.Id != 0)
             destination.Id = source.Id;
         destination.Name = source.Name;
         destination.Occupancy = source.Occupancy;
